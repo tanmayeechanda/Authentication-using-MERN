@@ -1,32 +1,34 @@
-const mongoose =require("mongoose");
-const jwt=require("jsonwebtoken");
-const joi=require("joi");
-const passwordComplexity=require("joi-password-complexity");
+const router = require("express").Router();
+const { User, validate } = require("../models/user");
+const bcrypt = require("bcrypt");
 
-const userSchema=new mongoose.Schema({
-    firstName:{type:String,reuired:true},
-    lastName:{type:String,reuired:true},
-    email:{type:String,reuired:true},
-    password:{type:String,reuired:true},
+// POST /api/users
+router.post("/", async (req, res) => {
+  try {
+    // 1. Validate input
+    const { error } = validate(req.body);
+    if (error)
+      return res.status(400).send({ message: error.details[0].message });
+
+    // 2. Check if user already exists
+    const existingUser = await User.findOne({ email: req.body.email });
+    if (existingUser)
+      return res.status(409).send({ message: "User already registered" });
+
+    // 3. Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+    // 4. Save new user
+    const user = new User({ ...req.body, password: hashedPassword });
+    await user.save();
+
+    // 5. Success response
+    res.status(201).send({ message: "User created successfully" });
+  } catch (err) {
+    console.error("Signup Error:", err);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
 });
 
-
-userSchema.methods.generateAuthToken=function(){
-    const token=jwt.sign({_id:this._id},process.env.JWTPRIVATEKEY,{expiresIn:"7d"});
-    return token;
-};
-
-const User= mongoose.model("user ",UserSchema);
-
-
-const validate=(data)=>{
-    const schema=joi.object({
-        firstName:joi.string().required().label("First name"),
-        LastName:joi.string().required().label("Last name"),
-        email:joi.string().email().required().label("Email"),
-        password:passwordComplexity().required().label("First name"),
-    })
-    return schema.validate(data);
-}
-
-module.exports={user,validate}
+module.exports = router;

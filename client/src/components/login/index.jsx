@@ -11,7 +11,7 @@ const Signup = () => {
 
   const [error, setError] = useState("");
   const handleChange = ({ currentTarget: input }) => {
-    setData({ ...data, [input.name]: input});
+    setData({ ...data, [input.name]: input.value});
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ const Signup = () => {
             <input
               type="password"
               placeholder="Password"
-              name="Password"
+              name="password"
               onChange={handleChange}
               value={data.password}
               required
